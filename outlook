@@ -1,0 +1,3 @@
+Type or paste outlook.exe /cleanrules in the Open field to clear all rules.
+Use outlook.exe /cleanserverrules if you know some client rules didn't sync up to the server.
+Use outlook.exe /cleanclientrules to keep the server rules.
