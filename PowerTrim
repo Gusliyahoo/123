@@ -15,3 +15,19 @@ result
 
 
 Rename Query as PowerTrim
+
+
+
+
+************
+Alternative to include nbsp
+
+(text as text, optional char_to_trim as text) =>
+let
+char = if char_to_trim = null then " " else char_to_trim,
+nbsp = if char=" " then Character.FromNumber(160) else "",
+split = Text.SplitAny(text, char & nbsp),
+removeblanks = List.Select(split, each _ ""),
+result=Text.Combine(removeblanks, char)
+in
+result
