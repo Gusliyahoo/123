@@ -1,0 +1,38 @@
+
+FilePath
+=LEFT(CELL("filename",$A$1),FIND("[",CELL("filename",$A$1),1)-1)
+
+
+
+let
+    FilePath = Excel.CurrentWorkbook(){[Name="FilePath"]}[Content]{0}[Column1],
+    Source = Folder.Files(FilePath&"Data"),
+    #"Filtered Hidden Files1" = Table.SelectRows(Source, each [Attributes]?[Hidden]? <> true),
+    #"Invoke Custom Function1" = Table.AddColumn(#"Filtered Hidden Files1", "Transform File", each #"Transform File"([Content])),
+    #"Renamed Columns1" = Table.RenameColumns(#"Invoke Custom Function1", {"Name", "Source.Name"}),
+    #"Removed Other Columns1" = Table.SelectColumns(#"Renamed Columns1", {"Source.Name", "Transform File"}),
+    #"Expanded Table Column1" = Table.ExpandTableColumn(#"Removed Other Columns1", "Transform File", Table.ColumnNames(#"Transform File"(#"Sample File"))),
+    #"Changed Type" = Table.TransformColumnTypes(#"Expanded Table Column1",{{"Source.Name", type text}, {"Column1", type text}, {"Column2", type text}, {"Column3", type text}, {"Column4", type text}, {"Column5", type text}, {"Column6", type text}, {"Column7", type text}, {"Column8", type text}, {"Column9", type text}, {"Column10", type text}, {"Column11", type text}, {"Column12", type text}, {"Column13", type text}, {"Column14", type text}, {"Column15", type text}, {"Column16", type text}, {"Column17", type text}, {"Column18", type text}, {"Column19", type text}}),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Changed Type", [PromoteAllScalars=true]),
+    #"Renamed Column to Agent" = Table.RenameColumns(#"Promoted Headers",{{"", "Agent"}}),
+    #"Changed Type - Default" = Table.TransformColumnTypes(#"Renamed Column to Agent",{{"raw_test.csv", type text}, {" ", type text}, {"Agent", type text}, {"Login", type time}, {"Logout", type time}, {"Online Time", type time}, {"Successful Op Transfer", Int64.Type}, {"AVG. Talk Time", type time}, {"AVG. Wrap Time", type time}, {"AVG. Available Time", type time}, {"AVG. Not Ready Time", type time}, {"Con/Hr", type number}, {"RPC : Payment/PTP", Int64.Type}, {"RPC : No Payment/PTP", Int64.Type}, {"Total RPCs", Int64.Type}, {"Total RPCs / Agent System Hr", type number}, {"RPC Rate(%)", Percentage.Type}, {"Conversion Rate(%)", Percentage.Type}, {"WPC", Int64.Type}, {"Non-Contacts", Int64.Type}}),
+    #"Filtered Rows - Removed Repeat Subheaders" = Table.SelectRows(#"Changed Type - Default", each ([Agent] <> "Agent Total" and [Agent] <> "Day Total" and [Agent] <> "ServiceTotal") and ([#" "] <> "Service")),
+    #"Filled Up" = Table.FillUp(#"Filtered Rows - Removed Repeat Subheaders",{"Login"}),
+    #"Removed Other Extra Columns" = Table.SelectColumns(#"Filled Up",{"Agent", "Login"}),
+    #"Filtered Rows - Blanks" = Table.SelectRows(#"Removed Other Extra Columns", each [Agent] <> "" and [Agent] <> " " and [Agent] <> "Agent Total" and [Agent] <> "Day Total"),
+    #"Split Column by Space" = Table.SplitColumn(#"Filtered Rows - Blanks", "Agent", Splitter.SplitTextByDelimiter(" ", QuoteStyle.Csv), {"Agent.1", "Agent.2", "Agent.3", "Agent.4"}),
+    #"Removed Extra Columns" = Table.SelectColumns(#"Split Column by Space",{"Agent.1", "Login"}),
+    #"Sorted Rows" = Table.Sort(#"Removed Extra Columns",{{"Agent.1", Order.Ascending}, {"Login", Order.Ascending}}),
+    #"Inserted Parsed Date" = Table.AddColumn(#"Sorted Rows", "Parse", each Date.From(DateTimeZone.From([Agent.1])), type date),
+    #"Replaced Errors" = Table.ReplaceErrorValues(#"Inserted Parsed Date", {{"Parse", #date(1900, 1, 1)}}),
+    #"Select Dummy Date" = Table.SelectRows(#"Replaced Errors", each ([Parse] = #date(1900, 1, 1))),
+    #"Removed Temp Column" = Table.SelectColumns(#"Select Dummy Date",{"Agent.1", "Login"}),
+    #"Sorted Rows by Login Time" = Table.Sort(#"Removed Temp Column",{{"Login", Order.Ascending}}),
+    #"Rename to Agent ID" = Table.RenameColumns(#"Sorted Rows by Login Time",{{"Agent.1", "Agent ID"}}),
+    #"Split Column by Character Transition" = Table.SplitColumn(#"Rename to Agent ID", "Agent ID", Splitter.SplitTextByCharacterTransition({"0".."9"}, (c) => not List.Contains({"0".."9"}, c)), {"Agent ID.1", "Agent ID.2"}),
+    #"Added Conditional Column" = Table.AddColumn(#"Split Column by Character Transition", "Custom", each if Text.Contains([Agent ID.1], "03") then [Agent ID.2] else [Agent ID.1]),
+    #"Removed Other Columns" = Table.SelectColumns(#"Added Conditional Column",{"Login", "Custom"}),
+    #"Reordered Columns" = Table.ReorderColumns(#"Removed Other Columns",{"Custom", "Login"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Reordered Columns",{{"Custom", "Agent ID"}})
+in
+    #"Renamed Columns"
