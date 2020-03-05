@@ -46,3 +46,24 @@ let
     #"Rounded Off" = Table.TransformColumns(#"Added Conditional Column",{{"Average", each Number.Round(_, 2), type number}})
 in
     #"Rounded Off"
+
+
+######################
+Name it's the name of the column I want to count occurrences
+List.Count(
+    Table.SelectRows(
+       #"Changed Type",
+        (C) => [Name] = C[Name]
+    )[Name]
+)
+
+##########################
+
+Same but multiple criteria
+
+List.Count(
+    Table.SelectRows(
+       #"Changed Type",
+        (C) => [Name] = C[Name] and [Score] = C[Score]
+    )[Name]
+)
