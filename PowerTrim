@@ -31,3 +31,18 @@ removeblanks = List.Select(split, each _ ""),
 result=Text.Combine(removeblanks, char)
 in
 result
+################################################
+
+let
+    Source = Excel.CurrentWorkbook(){[Name="Table11"]}[Content],
+    #"Changed Type" = Table.TransformColumnTypes(Source,{{"Name", type text}, {"Score #", type text}, {"Score", Int64.Type}}),
+    #"Duplicated Column" = Table.DuplicateColumn(#"Changed Type", "Score", "Score - Copy"),
+    #"Sorted Rows" = Table.Sort(#"Duplicated Column",{{"Score #", Order.Ascending}, {"Name", Order.Ascending}}),
+    #"Grouped Rows" = Table.Group(#"Sorted Rows", {"Name"}, {{"Count", each List.Average([#"Score - Copy"]), type number}}),
+    #"Merged Queries" = Table.NestedJoin(#"Grouped Rows", {"Name"}, Data, {"Name"}, "Data", JoinKind.LeftOuter),
+    #"Expanded Data"= Table.ExpandTableColumn(#"Merged Queries", "Data",List.RemoveItems(Table.ColumnNames(#"Merged Queries"[Data]{0}), {"Name"})),
+    #"Renamed Columns" = Table.RenameColumns(#"Expanded Data",{{"Count", "Average"}}),
+    #"Added Conditional Column" = Table.AddColumn(#"Renamed Columns", "Custom", each if [Average] >= 95 then "Great" else if [Average] >= 85 then "Minus 15" else "Lose all"),
+    #"Rounded Off" = Table.TransformColumns(#"Added Conditional Column",{{"Average", each Number.Round(_, 2), type number}})
+in
+    #"Rounded Off"
