@@ -67,3 +67,23 @@ List.Count(
         (C) => [Name] = C[Name] and [Score] = C[Score]
     )[Name]
 )
+
+
+###############################################
+let
+    Source = Excel.Workbook(File.Contents("C:\Users\Tavo\Desktop\NG.xlsx"), null, true),
+    Sheet1_Sheet = Source{[Item="Sheet1",Kind="Sheet"]}[Data],
+    #"Promoted Headers" = Table.PromoteHeaders(Sheet1_Sheet, [PromoteAllScalars=true]),
+    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Vendor", type text}, {"Date of Call", type any}, {"Agent Name", type text}, {"Length of Call", type text}, {"Evaluator", type text}, {"Agent Site Location", type text}, {"Jurisdiction", type text}, {"Call Type", type text}, {"Call Category", type text}, {"Language", type text}, {"Eligible", type text}, {"Score", Int64.Type}, {"Q_1", Int64.Type}, {"Q_2", Int64.Type}, {"Q_3", Int64.Type}, {"Q_4", Int64.Type}, {"Q_5", Int64.Type}, {"Q_6", Int64.Type}, {"Q_7", Int64.Type}, {"Q_8", Int64.Type}, {"Q_9", Int64.Type}, {"Q_10", Int64.Type}, {"Q_11", Int64.Type}, {"Q_12", Int64.Type}, {"Q_13", Int64.Type}, {"Q_14", Int64.Type}, {"Q_15", Int64.Type}, {"Q_16", Int64.Type}, {"Q_17", Int64.Type}, {"Evaluator Comments", type text}, {"Valid Transfer", type text}, {"Field Force Feedback", type text}, {"Field Force Comments", type any}}),
+    #"Filtered Rows" = Table.SelectRows(#"Changed Type", each ([Q_16] = 0)),
+    #"Removed Other Columns" = Table.SelectColumns(#"Filtered Rows",{"Agent Name", "Jurisdiction", "Call Type", "Call Category", "Q_16", "Evaluator Comments"}),
+    #"Removed Columns" = Table.RemoveColumns(#"Removed Other Columns",{"Q_16"}),
+    #"Extracted Text Between Delimiters" = Table.TransformColumns(#"Removed Columns", {{"Evaluator Comments", each Text.BetweenDelimiters(_, "Q16:", "Q17:"), type text}}),
+    #"Sorted Rows" = Table.Sort(#"Extracted Text Between Delimiters",{{"Agent Name", Order.Ascending}}),
+    #"Capitalized Each Word" = Table.TransformColumns(#"Sorted Rows",{{"Evaluator Comments", Text.Proper, type text}}),
+    #"Trimmed Text" = Table.TransformColumns(#"Capitalized Each Word",{{"Evaluator Comments", Text.Trim, type text}}),
+    #"Replaced Value" = Table.ReplaceValue(#"Trimmed Text","*","",Replacer.ReplaceText,{"Evaluator Comments"}),
+    #"Trimmed Text1" = Table.TransformColumns(#"Replaced Value",{{"Evaluator Comments", Text.Trim, type text}}),
+    #"Cleaned Text" = Table.TransformColumns(#"Trimmed Text1",{{"Evaluator Comments", Text.Clean, type text}})
+in
+    #"Cleaned Text"
